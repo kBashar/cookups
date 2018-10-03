@@ -3,6 +3,7 @@ This posts have somewhat a template though underlying markup is as messy as it g
 This scripts may become invalid as soon as facebook changes any of its data representaion format currently used.
 
 ##Requirements
+
     - selenium
     - openpyxl
     - beautifulsoup4
