@@ -38,16 +38,20 @@ def get_time(post):
 def get_description(post):
     description = []
     discards = ['...', 'see more']
-    description_elm = post.find(class_="userContent").find_all("p")
+    description_elm = post.find_all(class_="userContent")[1]
+    print(description_elm)
+    description_elm = description_elm.find_all("p")
+    print(description_elm)
     for des in description_elm:
         text = des.text
+        print(text)
         if text not in discards:
             description.append(des.text)
     return "".join(description)
 
 ''' link to cookupa webite is in the description, a regex search is used to find the urls'''
 def get_urls(post):
-    description_text = post.find(class_="userContent").text
+    description_text = post.find_all(class_="userContent")[1].text
     urls = re.findall(r'https://cookups.com.bd/offers/\d{5}', description_text)
     return urls
 
