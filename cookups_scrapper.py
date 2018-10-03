@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from bs4 import BeautifulSoup
+from openpyxl import Workbook
 
 import re
 
@@ -39,12 +40,9 @@ def get_description(post):
     description = []
     discards = ['...', 'see more']
     description_elm = post.find_all(class_="userContent")[1]
-    print(description_elm)
     description_elm = description_elm.find_all("p")
-    print(description_elm)
     for des in description_elm:
         text = des.text
-        print(text)
         if text not in discards:
             description.append(des.text)
     return "".join(description)
@@ -62,57 +60,88 @@ def get_image_url(post):
     url = "https://cookupsapp.s3.amazonaws.com/media/" + id
     return url
 
+'''save data in a xl file'''
+def save_in_xl(post_list):
+    wb = Workbook()
+    ws = wb.active
+    ws.append(("Cook", "Time", "Title", "Location", "Price", "Description", "Order link", "Image Url"))
+    for post in post_list:
+        ws.append(post)
 
-'''initiate webdriver. this will open a firfox instance'''
-driver = webdriver.Firefox()
+    wb.save("cookups_posts.xlsx")
 
-''' open facebook login page, as without login facebook doesn't permit browsing closed groups'''
-driver.get("https://www.facebook.com/login")
+''' save data in a file in json format'''
+def save_in_file(post_list):
+    import json
+    f = open("data.json", "w")
+    f.write(json.dumps(post_list))
+    f.close()
 
-''' to log in input your credentials'''
-driver.find_element_by_id("email").send_keys("kbashar.0.1")
-driver.find_element_by_id("pass").send_keys("rflbodn@2020")
-driver.find_element_by_id("loginbutton").click()
+''' login to facebook'''
+def login(driver):
+    ''' open facebook login page, as without login facebook doesn't permit browsing closed groups'''
+    driver.get("https://www.facebook.com/login")
 
+    ''' to log in input your credentials'''
+    email=input("enter user id: ")
+    passward=input("enter Passward: ") 
+    
+    driver.find_element_by_id("email").send_keys(email)
+    driver.find_element_by_id("pass").send_keys(passward)
+    driver.find_element_by_id("loginbutton").click()
 
-''' open cookups facebook group'''
-driver.get("https://www.facebook.com/groups/cookupsBD")
+'''extract data from each user posts'''
+def extract_data(posts):
+    post_data = []
+    post_xl_data = []
+    for post in posts:
+        username = get_username(post)
+        if (username != 'Cookups') and (username != 'CookupsFit'):
+            print("{0} is fetching".format(username))
+            time = get_time(post)
+            title = get_title(post)
+            price = get_price(post)
+            location = get_location(post)
+            description = get_description(post)
+            urls = get_urls(post)
+            image = get_image_url(post)
+            
+            xl_data = (username, time, title, location, price, description, str(urls), image)
+            data = {
+                'name': username,
+                'time': time,
+                'title': title,
+                'price': price,
+                'location': location,
+                'description': description,
+                'urls': urls,
+                'image': image
+                }
+            post_data.append(data)
+            post_xl_data.append(xl_data)
+            print("{0} posted at {1}".format(username, time))
 
-'''populate beautifulsoup with page html source'''
-html_soup = BeautifulSoup(driver.page_source, "html.parser")
+    return(post_data, post_xl_data)
 
-''' fetch user posts feed which are inside a div having class "userContentWrapper" '''
-posts = html_soup.find_all(class_="userContentWrapper")
+def main():
+    '''initiate webdriver. this will open a firfox instance'''
+    driver = webdriver.Firefox()
+    login(driver)
 
-print("Total number of posts found is {0}".format(len(posts)))
+    ''' open cookups facebook group'''
+    driver.get("https://www.facebook.com/groups/cookupsBD")
 
-post_data = []
-for post in posts:
-    username = get_username(post)
-    if (username != 'Cookups') and (username != 'CookupsFit'):
-        print("{0} is fetching".format(username))
-        time = get_time(post)
-        title = get_title(post)
-        price = get_price(post)
-        location = get_location(post)
-        description = get_description(post)
-        urls = get_urls(post)
-        image = get_image_url(post)
+    '''populate beautifulsoup with page html source'''
+    html_soup = BeautifulSoup(driver.page_source, "html.parser")
 
-        data = {
-            'name': username,
-            'time': time,
-            'title': title,
-            'price': price,
-            'location': location,
-            'description': description,
-            'urls': urls,
-            'image': image
-            }
-        post_data.append(data)
-        print("{0} posted at {1}".format(username, time))
+    ''' fetch user posts feed which are inside a div having class "userContentWrapper" '''
+    posts = html_soup.find_all(class_="userContentWrapper")
 
-f = open("data.txt", "w")
-f.write(str(post_data))
-f.close()
+    print("Total number of posts found is {0}".format(len(posts)))
 
+    data_tuple = extract_data(posts)
+    save_in_file(data_tuple[0])
+    save_in_xl(data_tuple[1])
+
+if __name__== "__main__":
+    main()

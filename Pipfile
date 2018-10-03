@@ -7,6 +7,7 @@ name = "pypi"
 selenium = "*"
 ipython = "*"
 "beautifulsoup4" = "*"
+openpyxl = "*"
 
 [dev-packages]
 
